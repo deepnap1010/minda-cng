@@ -264,8 +264,9 @@ function MachineDetail({ data, dateProps }) {
   const lastShort = m.lastCylinderId?.split("-").pop() ?? "—";
   const { from, to, setFrom, setTo } = dateProps;
   // Stage 1 (Pipe Cutting) is operator-entered — show the submitted values per
-  // Pipe ID (like the plant's own JFE screen), not live gauges.
-  const isManualStage = m.stationIndex === 1;
+  // Pipe ID (like the plant's own JFE screen), not live gauges. Name fallback:
+  // a production machine row may exist before anyone maps its stage_no.
+  const isManualStage = m.stationIndex === 1 || /pipe\s*cut/i.test(m.name || "");
 
   return (
     <div className="min-h-full bg-gray-50">

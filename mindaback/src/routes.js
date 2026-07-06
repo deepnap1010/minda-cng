@@ -37,6 +37,7 @@ import CylinderSyncRoutes from './routes/cylinderSync.routes.js'
 import { createCngData } from './controller/cng.controller.js'
 import SapRoutes from './routes/sap.routes.js'
 import { createSapData } from './controller/sap.controller.js'
+import { syncAccessLogger } from './utils/logger.js'
 
 const routes = Router()
 
@@ -82,6 +83,28 @@ routes.use('/sap', Authorization, SapRoutes)
 // Teammate's SAP material-master lookup — coexists on /sap (subpaths /materials,/material-types
 // don't collide with the ingest's /ingest,/inbox,/keys above).
 routes.use('/sap', Authorization, SapMaterialRoutes)
+
+// Access log for the SAP-facing feeds. Logs ONE line per request AFTER it
+// completes, so it records the OUTCOME too (200 OK / 401 AUTH-FAIL / 4xx-5xx
+// ERROR), source IP, path, and whether a key was sent (never the key VALUE).
+// Placed BEFORE the key check so failed attempts are logged as well. Written to
+// logs/sync-access.log (own file) + console.
+// NOTE: this only fires if the request REACHES the app — a network-level refusal
+// (NIECONN_REFUSED) never arrives here and so leaves no line (that absence is
+// itself the proof the block is upstream of us).
+routes.use('/sync', (req, res, next) => {
+  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket?.remoteAddress || 'unknown'
+  const keyState = (req.headers['x-api-key'] || req.headers.authorization) ? 'present' : 'MISSING'
+  const t0 = Date.now()
+  res.on('finish', () => {
+    const s = res.statusCode
+    const outcome = s < 400 ? 'OK' : s === 401 ? 'AUTH-FAIL' : 'ERROR'
+    syncAccessLogger.info(
+      `[sync-access] ip=${ip} ${req.method} ${req.originalUrl} key=${keyState} -> ${s} ${outcome} ${Date.now() - t0}ms ua="${req.headers['user-agent'] || '-'}"`
+    )
+  })
+  next()
+})
 
 // Teammate's OUTBOUND template->SAP sync feed for Minda's engineers (x-api-key auth, NOT user login).
 // Replaces the user's earlier /integration delta-pull API.
