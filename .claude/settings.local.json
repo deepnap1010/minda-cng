@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Write-Output \"=== node processes ===\"; $procs = Get-CimInstance Win32_Process -Filter \"Name='node.exe'\"; if \\($procs\\) { $procs | Select-Object ProcessId, @{n='Cmd';e={$_.CommandLine}} | Format-List } else { Write-Output \"\\(none\\)\" }; Write-Output \"=== listening dev ports ===\"; $ports = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in 9021,5180,5173,4173,3000 }; if \\($ports\\) { $ports | Select-Object LocalPort, OwningProcess | Sort-Object LocalPort -Unique | Format-Table -AutoSize } else { Write-Output \"\\(none\\)\" })",
+      "PowerShell(Stop-Process -Id 19776,14544 -Force -ErrorAction SilentlyContinue; Start-Sleep -Milliseconds 500; $still = Get-CimInstance Win32_Process -Filter \"Name='node.exe'\"; if \\($still\\) { Write-Output \"REMAINING node processes:\"; $still | Select-Object ProcessId, @{n='Cmd';e={$_.CommandLine}} | Format-List } else { Write-Output \"All node.exe processes stopped.\" }; $p = Get-NetTCPConnection -State Listen -ErrorAction SilentlyContinue | Where-Object { $_.LocalPort -in 9021,5180,5173,4173,3000 }; if \\($p\\) { Write-Output \"Ports still listening:\"; $p | Select-Object LocalPort, OwningProcess | Format-Table -AutoSize } else { Write-Output \"All dev ports free.\" })",
+      "Bash(python -c \"import reportlab; print\\('reportlab', reportlab.Version\\)\")",
+      "Bash(python -c \"import pypdf; print\\('pypdf ok'\\)\")",
+      "Bash(where pdftoppm *)",
+      "Bash(py -c \"import sys; print\\(sys.version\\)\")",
+      "Bash(py -c \"import reportlab; print\\('reportlab', reportlab.Version\\)\")",
+      "Bash(where node *)",
+      "Read(//c/Program Files \\(x86\\)/Microsoft/Edge/Application/**)",
+      "Read(//c/Program Files/Microsoft/Edge/Application/**)",
+      "Read(//c/Program Files/Google/Chrome/Application/**)",
+      "Bash('/c/Program Files/Google/Chrome/Application/chrome.exe' --headless --disable-gpu --no-pdf-header-footer --print-to-pdf=D:/minda-cyl-rhl/Cylinder_Sync_Feed_Spec.pdf file:///C:/Users/1/AppData/Local/Temp/claude/D--minda-cyl-rhl/c539ddf6-17f0-4ccc-bf98-731cfa77c71f/scratchpad/cylinder-sync-spec.html)",
+      "Bash('/c/Program Files/Google/Chrome/Application/chrome.exe' --headless --disable-gpu --screenshot=C:/Users/1/AppData/Local/Temp/claude/D--minda-cyl-rhl/c539ddf6-17f0-4ccc-bf98-731cfa77c71f/scratchpad/qa-sync.png --window-size=794,3800 file:///C:/Users/1/AppData/Local/Temp/claude/D--minda-cyl-rhl/c539ddf6-17f0-4ccc-bf98-731cfa77c71f/scratchpad/cylinder-sync-spec.html)"
+    ]
+  }
+}

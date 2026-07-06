@@ -1,0 +1,28 @@
+node_modules/
+dist/
+build/
+.vite/
+*.log
+npm-debug.log*
+
+# env
+.env
+.env.local
+.env.*.local
+server/.env
+client/.env
+
+# os / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# pm2 / logs
+logs/
+*.pid
+
+# docker volume mounts (if mapped locally)
+.mssql-data/
+.redis-data/
