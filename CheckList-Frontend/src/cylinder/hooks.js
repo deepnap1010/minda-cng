@@ -105,9 +105,12 @@ export function useCreateCylinder() {
 export function useStageRecords({ stageNo, limit = 25 } = {}) {
   return useQuery({
     queryKey: ["cyl-stage-records", stageNo, limit],
-    queryFn: () => cngGet("/stage-records", { stage_no: stageNo, limit }),
+    queryFn: async () => {
+      if (USE_MOCK) return [];
+      return cngGet("/stage-records", { stage_no: stageNo, limit });
+    },
     enabled: stageNo != null,
-    refetchInterval: 10000,
+    refetchInterval: USE_MOCK ? false : 10000,
   });
 }
 

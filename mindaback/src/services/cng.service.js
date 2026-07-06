@@ -441,12 +441,14 @@ export async function listMachines() {
       activePipeId: m.active_pipe_id,
       operatorUserId: m.operator_user_id || null,
       lastSeenAt: m.last_seen_at,
-      metricsSeen: m.metrics_seen || [],
+      metricsSeen: asArr(m.metrics_seen),
       line: m.line || null,
-      gauges: m.gauges || [],
+      gauges: asArr(m.gauges),
       primary: m.primary_label != null ? { label: m.primary_label, value: m.primary_value, unit: m.primary_unit } : null,
       headline: latest ? { label: latest.headline_label, value: latest.headline_value } : (m.primary_label ? { label: m.primary_label, value: m.primary_value } : null),
-      metrics: latest?.metrics || m.latest_data || {},
+      // raw:true returns MSSQL json columns as STRINGS — parse or the frontend
+      // spreads them char-by-char into garbage gauges.
+      metrics: asObj(latest?.metrics || m.latest_data),
     });
   }
   return out;
@@ -486,15 +488,17 @@ export async function getMachine(machineId, { historyLimit = 50, from, to } = {}
     activePipeId: m.active_pipe_id,
     operatorUserId: m.operator_user_id || null,
     lastSeenAt: m.last_seen_at,
-    metricsSeen: m.metrics_seen || [],
-    thresholds: m.thresholds || {},
+    // raw:true returns MSSQL json columns as STRINGS — parse them here or the
+    // frontend spreads them char-by-char into garbage gauges.
+    metricsSeen: asArr(m.metrics_seen),
+    thresholds: asObj(m.thresholds),
     line: m.line || null,
-    gauges: m.gauges || [],
+    gauges: asArr(m.gauges),
     primary: m.primary_label != null ? { label: m.primary_label, value: m.primary_value, unit: m.primary_unit } : null,
-    metrics: m.latest_data || {},
+    metrics: asObj(m.latest_data),
     latest: latest
-      ? { metrics: latest.metrics, headline: { label: latest.headline_label, value: latest.headline_value }, status: latest.status, recordedAt: latest.recorded_at }
-      : (m.latest_data ? { metrics: m.latest_data, headline: m.primary_label ? { label: m.primary_label, value: m.primary_value } : null, status: m.status, recordedAt: m.last_seen_at } : null),
+      ? { metrics: asObj(latest.metrics), headline: { label: latest.headline_label, value: latest.headline_value }, status: latest.status, recordedAt: latest.recorded_at }
+      : (m.latest_data ? { metrics: asObj(m.latest_data), headline: m.primary_label ? { label: m.primary_label, value: m.primary_value } : null, status: m.status, recordedAt: m.last_seen_at } : null),
     recent: recentRecs.map((r) => ({
       pipeId: r.pipe_id,
       stageNo: r.stage_no,
@@ -562,7 +566,8 @@ export async function listStageRecords({ stageNo, machineId, pipeId, limit = 25 
   const where = {};
   if (stageNo !== undefined && stageNo !== null && stageNo !== "") {
     const sn = Number(stageNo);
-    if (Number.isInteger(sn) && sn >= 1) where.stage_no = sn;
+    if (!Number.isInteger(sn) || sn < 1) return []; // bad filter → empty, never all-stage records
+    where.stage_no = sn;
   }
   if (machineId) where.machine_id = String(machineId);
   if (pipeId) where.pipe_id = { [Op.like]: `%${String(pipeId)}%` };
