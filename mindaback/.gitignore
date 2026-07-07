@@ -20,7 +20,9 @@ lerna-debug.log*
 .next
 out
 logs
-config
+# NOTE: a bare "config" here matched src/config/ (redis.js, mongodb.js,
+# MailTransporter.js, sap-materials.sample.json — all essential source, no
+# secrets) and silently excluded it from git. Ignore only config.json files.
 **/config.json
 
 # Ignore specific script
