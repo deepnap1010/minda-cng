@@ -61,6 +61,14 @@ function mergeSeen(existing, incoming) {
 
 async function upsertMachineFromPacket(n) {
   const machineId = n.machineId || "UNIDENTIFIED";
+  // Display-ready readings for the machine card: canonical metrics + raw passthrough.
+  // WITHOUT this the machine row carries no live values and the dashboard card
+  // shows nothing (or stale seed data) even while stage records fill up.
+  const liveMetrics = { ...(n.clean || {}), ...(n.extra || {}) };
+  const seen = n.fieldKeys?.length ? n.fieldKeys : Object.keys(liveMetrics);
+  const hl = n.headline || {};
+  const pv = typeof hl.value === "number" ? hl.value : null;
+
   let machine = await CngMachineModel.findOne({ where: { machine_id: machineId } });
   if (!machine) {
     machine = await CngMachineModel.create({
@@ -70,14 +78,19 @@ async function upsertMachineFromPacket(n) {
       dialect: n.dialect || null,
       stage_no: n.stageNo || null,
       status: n.status || "running",
-      metrics_seen: n.fieldKeys || [],
+      metrics_seen: seen,
+      latest_data: liveMetrics,
+      primary_label: hl.label || null,
+      primary_value: pv,
       last_seen_at: now(),
     });
     return machine;
   }
   machine.last_seen_at = now();
   machine.status = n.status || machine.status;
-  machine.metrics_seen = mergeSeen(machine.metrics_seen, n.fieldKeys);
+  machine.metrics_seen = mergeSeen(machine.metrics_seen, seen);
+  machine.latest_data = liveMetrics;                 // ← the card's live readings, refreshed each packet
+  if (hl.label) { machine.primary_label = hl.label; machine.primary_value = pv; }
   if (!machine.dialect && n.dialect) machine.dialect = n.dialect;
   if (!machine.name && n.name) machine.name = n.name;
   if (!machine.machine_type && n.type) machine.machine_type = n.type;

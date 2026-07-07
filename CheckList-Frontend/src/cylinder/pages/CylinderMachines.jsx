@@ -15,40 +15,67 @@ function MachineCard({ m }) {
   const vals = useFloat(m.gaugeTags, m.live, m.status !== "idle");
   const primG = m.gaugeTags.find((g) => g.tag === m.primaryTag);
   const primVal = vals[m.primaryTag] ?? m.primaryValue;
+  const primLabel = primG?.label ?? m.primaryTag ?? "—";
+  const primUnit = primG?.unit ?? m.primaryUnit ?? "";
+  const tiles = m.gaugeTags.filter((g) => g.tag !== m.primaryTag).slice(0, 6);
+  const liveCount = m.gaugeTags.length;
   const lastShort = m.lastCylinderId?.split("-").pop() ?? "—";
+  const err = m.status === "error";
 
   return (
     <div onClick={() => navigate(`/cylinder/machines/${encodeURIComponent(m.key)}`)}
-      className="cursor-pointer rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
-      <div className="mb-3 flex items-start justify-between">
-        <div>
-          <div className="text-sm font-semibold text-gray-900">{m.name}</div>
+      className="group cursor-pointer rounded-xl border border-gray-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-blue-200 hover:shadow-md">
+      {/* header */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="truncate text-sm font-semibold text-gray-900">{m.name}</div>
           <div className="font-mono text-[11px] text-gray-400">{m.key} · {m.line || `St ${m.stationIndex}`}</div>
         </div>
         <StatusPill meta={sm} />
       </div>
-      <div className="text-[10.5px] font-semibold uppercase tracking-wide text-gray-400">{primG?.label ?? m.primaryTag ?? "—"}</div>
-      <div className="flex items-baseline gap-1">
-        <span className={`font-mono text-3xl font-semibold tabular-nums ${m.status === "error" ? "text-rose-600" : "text-gray-900"}`}>
-          {primVal != null ? fmt(primVal) : "—"}
-        </span>
-        <span className="text-xs text-gray-500">{m.primaryUnit}</span>
+
+      {/* live-signal indicator */}
+      <div className="mt-2 flex items-center gap-1.5 text-[11px] text-gray-500">
+        <span className={`h-1.5 w-1.5 rounded-full ${liveCount ? "animate-pulse bg-emerald-500" : "bg-gray-300"}`} />
+        {liveCount ? `${liveCount} signal${liveCount > 1 ? "s" : ""} live` : "waiting for signals"}
       </div>
-      <div className="my-2"><Sparkline seed={m.key} color={m.status === "error" ? "#ef4444" : "#10b981"} /></div>
-      <div className="flex gap-4 border-t border-gray-100 pt-3">
-        {m.secondary?.map((s) => (
-          <div key={s.tag}>
-            <div className="text-[10px] uppercase tracking-wide text-gray-400">{s.label}</div>
-            <div className="font-mono text-[13px] text-gray-700">{vals[s.tag] != null ? fmt(vals[s.tag]) : fmt(s.value)} {s.unit}</div>
-          </div>
-        ))}
-        <div className="ml-auto text-right">
-          <div className="text-[10px] uppercase tracking-wide text-gray-400">Last cyl</div>
-          <div className="font-mono text-[13px] text-gray-700">{lastShort}</div>
+
+      {/* primary metric + sparkline */}
+      <div className="mt-3 rounded-lg bg-gray-50/70 px-3 py-2.5">
+        <div className="truncate text-[10.5px] font-semibold uppercase tracking-wide text-gray-400">{primLabel}</div>
+        <div className="flex items-baseline gap-1">
+          <span className={`font-mono text-[28px] font-semibold leading-tight tabular-nums ${err ? "text-rose-600" : "text-gray-900"}`}>
+            {primVal != null ? fmt(primVal) : "—"}
+          </span>
+          <span className="text-xs text-gray-500">{primUnit}</span>
         </div>
+        <div className="mt-1"><Sparkline seed={m.key} color={err ? "#ef4444" : "#2563eb"} /></div>
       </div>
-      {m.status === "error" && (
-        <div className="mt-3 flex items-center gap-1.5 text-[11.5px] text-rose-600">
+
+      {/* live-reading tiles */}
+      {tiles.length > 0 ? (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {tiles.map((g) => (
+            <div key={g.tag} className="rounded-lg border border-gray-100 bg-white px-2.5 py-1.5">
+              <div className="truncate text-[9.5px] font-semibold uppercase tracking-wide text-gray-400">{g.label}</div>
+              <div className="font-mono text-[13px] tabular-nums text-gray-800">
+                {vals[g.tag] != null ? fmt(vals[g.tag]) : "—"}<span className="ml-0.5 text-[10px] text-gray-400">{g.unit}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="mt-3 rounded-lg border border-dashed border-gray-200 py-3 text-center text-[11px] text-gray-400">Waiting for machine data…</div>
+      )}
+
+      {/* footer */}
+      <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-2.5">
+        <div className="text-[10px] uppercase tracking-wide text-gray-400">Last cyl <span className="ml-1 font-mono text-[12px] text-gray-600">{lastShort}</span></div>
+        <span className="text-[11px] font-medium text-blue-600 opacity-0 transition group-hover:opacity-100">Open →</span>
+      </div>
+
+      {err && (
+        <div className="mt-2 flex items-center gap-1.5 text-[11.5px] text-rose-600">
           <AlertTriangle size={13} /> {m.errorMsg}
         </div>
       )}
