@@ -23,6 +23,13 @@ export const FIELD_META = {
   od: { label: "Pipe OD", unit: "mm" }, wall: { label: "Wall Thk", unit: "mm" },
   cutLength: { label: "Cut Length", unit: "mm" }, cutWeight: { label: "Cut Weight", unit: "kg" },
   line: { label: "Line" }, shift: { label: "Shift" }, remark: { label: "Remark" },
+  // IHF & Bottom Spinning PLC telemetry keys (raw snake_case as the machines emit).
+  ihf_coil_temp: { label: "IHF Temp", unit: "°C" }, ihf_temp: { label: "IHF Temp", unit: "°C" }, ihf: { label: "IHF Temp", unit: "°C" },
+  spg_chuck_temp: { label: "Spin. Chuck Temp", unit: "°C" }, spinning_temp: { label: "Spin. Chuck Temp", unit: "°C" }, spg_temp: { label: "Spin. Temp", unit: "°C" },
+  o2_pressure: { label: "O₂ Pressure", unit: "kg/cm²" }, o2_gas: { label: "O₂ Gas", unit: "kg/cm²" }, oxy: { label: "O₂ Gas", unit: "kg/cm²" },
+  png_pressure: { label: "PNG Pressure", unit: "kg/cm²" }, png: { label: "PNG Pressure", unit: "kg/cm²" },
+  air_pressure: { label: "Air Pressure", unit: "kg/cm²" }, air: { label: "Air Pressure", unit: "kg/cm²" },
+  da_gas: { label: "DA Gas", unit: "kg/cm²" }, da_pressure: { label: "DA Gas", unit: "kg/cm²" }, da: { label: "DA Gas", unit: "kg/cm²" },
 };
 
 export const fieldMeta = (key) => FIELD_META[key] ?? { label: key };

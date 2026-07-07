@@ -41,6 +41,10 @@ export const RANGES = {
   pressure: [0, 350], temperature: [0, 1000], hardness: [60, 100], depth: [0, 10],
   flow: [0, 50], thickness: [0, 12], speed: [0, 600], count: [0, 500],
   proofPressure: [280, 320], furnaceTemp: [820, 920], wallThk: [6, 7], bottomThk: [6.5, 7.5],
+  // IHF & Bottom Spinning nominal bands (match the plant HMI); out-of-band demo
+  // values auto-expand the max in gaugeTagsFrom so the needle never pegs.
+  ihf_coil_temp: [0, 1400], ihf_temp: [0, 1400], spg_chuck_temp: [0, 1200], spinning_temp: [0, 1200],
+  o2_pressure: [0, 10], png_pressure: [0, 10], air_pressure: [0, 10], da_gas: [0, 10],
 };
 
 const META = {
@@ -65,9 +69,11 @@ function gaugeTagsFrom(metrics = {}, headlineLabel) {
   for (const [k, v] of Object.entries(metrics)) {
     const n = num(v);
     if (n === null) continue; // skip strings like "FAULT"/"PASS"
-    const m = metaFor(k);
-    const r = RANGES[k] || [0, Math.max(1, n * 1.6)];
-    tags.push({ tag: k, label: m.label || k, min: r[0], max: r[1], unit: m.unit || "" });
+    const meta = metaFor(k);
+    let [mn, mx] = RANGES[k] || [0, Math.max(1, n * 1.6)];
+    if (n > mx) mx = n * 1.2;            // never peg the needle when a value exceeds its nominal band
+    if (n < mn) mn = Math.min(0, n);
+    tags.push({ tag: k, label: meta.label || k, min: mn, max: mx, unit: meta.unit || "" });
     if (tags.length >= 6) break;
   }
   // Put the headline metric first if present.
@@ -94,7 +100,9 @@ export function adaptMachineView(m) {
     });
     m.gauges.forEach((g) => { const tag = g.tag || slugify(g.label); const v = num(g.value); if (v != null) live[tag] = v; });
   } else {
-    const metrics = m.metrics || m.latest?.metrics || {};
+    // m.metrics may be an EMPTY object (truthy) when the machine row has no
+    // latest_data yet — fall through to the latest stage record's metrics.
+    const metrics = (m.metrics && Object.keys(m.metrics).length) ? m.metrics : (m.latest?.metrics || {});
     const headlineLabel = m.headline?.label || m.latest?.headline?.label || null;
     gaugeTags = gaugeTagsFrom(metrics, headlineLabel);
     live = { ...metrics };
