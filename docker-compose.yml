@@ -1,46 +1,75 @@
-# Local dev infrastructure for JFE TraceLine: Microsoft SQL Server + Redis.
-# Start with:  docker compose up -d   (or  npm run infra:up)
-# Stop with:   docker compose down     (or  npm run infra:down)
+# One-command dev environment for the JP Minda platform.
 #
-# Defaults here line up with .env.example, so the app connects out of the box.
+#   docker compose up --build
+#
+# Brings up, on one network:
+#   - mssql      SQL Server 2025 (REQUIRED: the app uses the native JSON column type)
+#   - mssql-init creates the JPMDO database once, then exits
+#   - redis      cache / sessions
+#   - backend    Express API on http://localhost:9021  (auto-creates tables in dev)
+#   - frontend   Vite dev server on http://localhost:5180
+#
+# MongoDB (raw CNG telemetry) is OPTIONAL and off by default — set MONGODB_URI in
+# mindaback/.env.docker to enable it. Everything else runs without it.
+
 services:
   mssql:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    container_name: jfe-mssql
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    container_name: minda-mssql
     environment:
       ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "Minda@Dev2026"
       MSSQL_PID: "Developer"
-      # Must match DB_PASSWORD in .env (SQL Server enforces password complexity).
-      MSSQL_SA_PASSWORD: "Jfe_TraceLine#2026"
     ports:
       - "1433:1433"
     volumes:
       - mssql-data:/var/opt/mssql
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1",
-        ]
-      interval: 10s
-      timeout: 5s
-      retries: 12
-      start_period: 30s
     restart: unless-stopped
 
   redis:
     image: redis:7-alpine
-    container_name: jfe-redis
+    container_name: minda-redis
     command: ["redis-server", "--appendonly", "yes"]
     ports:
       - "6379:6379"
     volumes:
       - redis-data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 3s
-      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build: ./mindaback
+    container_name: minda-backend
+    env_file:
+      - ./mindaback/.env.docker
+    depends_on:
+      mssql:
+        condition: service_started
+      redis:
+        condition: service_started
+    ports:
+      - "9021:9021"
+    volumes:
+      - ./mindaback:/app
+      - /app/node_modules
+    # Wait for SQL Server, create the JPMDO database if missing, then start dev.
+    command: sh -c "node scripts/docker-init-db.js && npm run dev"
+    restart: unless-stopped
+
+  frontend:
+    build: ./CheckList-Frontend
+    container_name: minda-frontend
+    environment:
+      # Vite dev-proxy target = the backend CONTAINER. Inside this container
+      # "localhost" would mean the frontend itself, so we use the service name.
+      - VITE_BACKEND_URL=http://backend:9021/api/v1
+    depends_on:
+      - backend
+    ports:
+      - "5180:5180"
+    volumes:
+      - ./CheckList-Frontend:/app
+      - /app/node_modules
+    command: npm run dev -- --host 0.0.0.0
     restart: unless-stopped
 
 volumes:
