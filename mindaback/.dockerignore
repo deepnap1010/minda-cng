@@ -1,0 +1,15 @@
+node_modules
+npm-debug.log*
+.git
+.gitignore
+dist
+build
+coverage
+logs
+*.log
+.env
+.env.local
+.env.production
+.env.docker
+.vscode
+.idea

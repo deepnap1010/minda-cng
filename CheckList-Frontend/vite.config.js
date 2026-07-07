@@ -9,9 +9,15 @@ export default defineConfig(({ mode }) => {
   // Proxy target = the ORIGIN of VITE_BACKEND_URL, so changing the .env backend
   // keeps the dev proxy in sync. Browser talks to localhost (same origin) → Vite
   // forwards server-side → no browser CORS.
+  // Prefer a process-env override (set by docker-compose). Inside the Docker
+  // frontend container, "localhost" means the container itself, not the backend,
+  // so compose passes VITE_BACKEND_URL=http://backend:9021/... (the backend
+  // service name) to point the proxy at the right container. Outside Docker this
+  // is unset, so the .env value (localhost:9021) is used as before.
+  const backendUrl = process.env.VITE_BACKEND_URL || env.VITE_BACKEND_URL;
   let backendOrigin = "https://digitisationapi.jpmgroup.co.in";
   try {
-    backendOrigin = new URL(env.VITE_BACKEND_URL).origin;
+    backendOrigin = new URL(backendUrl).origin;
   } catch { /* keep default */ }
 
   // The backend's CORS allows requests with NO Origin but rejects unknown origins.
